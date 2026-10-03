@@ -1,0 +1,89 @@
+TCOM conformance tester
+=======================
+
+This service checks an implementation of the TCOM image format against its
+specification. It presents challenges: encode an image, or decode a byte
+stream. Each answer is graded pass or fail with no further detail. Rely on
+the specification, not on the grader.
+
+Authentication
+--------------
+Send your API key on every request except this page:
+
+    Authorization: Bearer <key>
+
+Endpoints
+---------
+    GET  /challenges          list unsolved challenges
+    GET  /challenges/{id}     get a new instance of a challenge
+    POST /challenges/{id}     submit an answer for the current instance
+
+Request and response bodies are JSON.
+
+Listing
+-------
+GET /challenges returns:
+
+    {"total": 77, "solved": 3,
+     "unsolved": [{"id": "c05", "kind": "decode", "passes_needed": 2}, ...]}
+
+A challenge is solved once it has passed passes_needed more times. Each
+pass must be on a new instance, and instances differ in their input.
+
+Instances
+---------
+GET /challenges/{id} returns a new instance with freshly generated input:
+
+    {"id": "c05", "kind": "encode", "instance": "<token>", "input": {...}}
+
+Fetching again replaces the previous instance. Each instance accepts exactly
+one submission. Solved challenges may still be fetched and answered.
+
+Kinds
+-----
+encode: the input is an image. Answer with its canonical encoding, as
+defined in the specification's Encoding section, in hex, including the
+16-byte header.
+
+    input:  {"width": 2, "height": 1, "channels": 3,
+             "pixels": [0, 0, 0, 255, 255, 255]}
+    answer: {"data": "54434f4d020000000100000003000000e015"}
+
+decode: the input is a byte stream in hex. Answer whether it is a valid TCOM
+stream and, if it is, the decoded image.
+
+    input:  {"data": "54434f4d020000000100000003000000e015"}
+    answer: {"valid": true,
+             "image": {"width": 2, "height": 1, "channels": 3,
+                       "pixels": [0, 0, 0, 255, 255, 255]}}
+    answer: {"valid": false}
+
+Images
+------
+"pixels" is a flat array of width*height*channels integers 0-255, in the
+specification's raw image layout: rows top to bottom, pixels left to right,
+and each pixel's channels in order.
+
+Hex in inputs is lowercase. Hex in answers may use either case, with no
+"0x" prefix and no separators.
+
+Submitting
+----------
+POST /challenges/{id} with:
+
+    {"instance": "<token>", "answer": <answer>}
+
+The response is {"result": "pass"} or {"result": "fail"}.
+
+A malformed submission gets HTTP 400 with an explanation and is not graded.
+That covers invalid JSON, missing fields, bad hex, pixel values out of
+range, and a pixel count that doesn't match the image's dimensions. A
+submission for a replaced or already answered instance gets HTTP 409.
+
+Example
+-------
+    curl -H "Authorization: Bearer $KEY" $URL/challenges
+    curl -H "Authorization: Bearer $KEY" $URL/challenges/c05
+    curl -H "Authorization: Bearer $KEY" \
+         -d '{"instance": "...", "answer": {"valid": false}}' \
+         $URL/challenges/c05

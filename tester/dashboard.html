@@ -1,0 +1,101 @@
+{{define "head"}}<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.}}</title>
+<style>
+:root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#e3e2dd; --card:#fff;
+        --ok:#1f7a4d; --okbg:#e3f3ea; --bad:#b4372f; --badbg:#fae6e3; --link:#2558b5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#161615; --fg:#e8e7e3; --muted:#9a9993; --line:#2e2d2a; --card:#1e1e1c;
+          --ok:#6fcf9b; --okbg:#173325; --bad:#f0857b; --badbg:#3a1d1a; --link:#8ab4ff; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:14px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+h1 { font-size:20px; margin:0 0 4px; }
+h2 { font-size:15px; margin:28px 0 8px; }
+.sub { color:var(--muted); margin-bottom:20px; }
+a { color:var(--link); text-decoration:none; } a:hover { text-decoration:underline; }
+.wrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+table { border-collapse:collapse; width:100%; }
+th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font-weight:600; color:var(--muted); font-size:12px; white-space:nowrap; }
+tr:last-child td { border-bottom:none; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+code, pre { font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pill { display:inline-block; padding:1px 7px; border-radius:10px; font-size:12px; margin:1px 2px 1px 0; }
+.ok { background:var(--okbg); color:var(--ok); }
+.bad { background:var(--badbg); color:var(--bad); }
+.dim { background:var(--line); color:var(--muted); }
+.stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; min-width:120px; }
+.stat b { display:block; font-size:20px; font-variant-numeric:tabular-nums; }
+.stat span { color:var(--muted); font-size:12px; }
+.fail { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+.fail .diff { margin:6px 0; }
+details { margin-top:6px; } summary { cursor:pointer; color:var(--muted); }
+pre { white-space:pre-wrap; word-break:break-all; background:var(--bg); border:1px solid var(--line);
+      border-radius:6px; padding:8px; max-height:320px; overflow:auto; margin:4px 0 8px; }
+.muted { color:var(--muted); }
+</style></head><body><main>{{end}}
+
+{{define "foot"}}</main></body></html>{{end}}
+
+{{define "index"}}{{template "head" "TCOM tester"}}
+<h1>TCOM tester</h1>
+<div class="sub">{{.Total}} challenges, {{.TotalVariants}} required passes in all</div>
+{{if not .Keys}}<p class="muted">No API keys have been used yet.</p>{{else}}
+<div class="wrap"><table>
+<tr><th>Key</th><th class="num">Solved</th><th class="num">Passes</th><th class="num">Attempts</th>
+<th class="num">Failures</th><th class="num">First-try pass</th><th>First seen</th><th>Last activity</th></tr>
+{{range .Keys}}<tr>
+<td><a href="key/{{.Path}}"><code>{{.Key}}</code></a></td>
+<td class="num">{{.Solved}} / {{$.Total}}</td>
+<td class="num">{{.Passes}} / {{$.TotalVariants}}</td>
+<td class="num">{{.Attempts}}</td>
+<td class="num">{{if .Fails}}<span class="pill bad">{{.Fails}}</span>{{else}}0{{end}}</td>
+<td class="num">{{.FirstTry}}</td>
+<td>{{.First}}</td><td>{{.Last}}</td>
+</tr>{{end}}
+</table></div>{{end}}
+{{template "foot"}}{{end}}
+
+{{define "key"}}{{template "head" .Key}}
+<p><a href="../">← all keys</a></p>
+<h1><code>{{.Key}}</code></h1>
+<div class="sub">First seen {{.First}} · last activity {{.Last}}</div>
+<div class="stats">
+<div class="stat"><b>{{.Solved}} / {{.Total}}</b><span>challenges solved</span></div>
+<div class="stat"><b>{{.Passes}} / {{.TotalVariants}}</b><span>required passes</span></div>
+<div class="stat"><b>{{.Attempts}}</b><span>submissions</span></div>
+<div class="stat"><b>{{.Fails}}</b><span>failures</span></div>
+<div class="stat"><b>{{.FirstTry}}</b><span>first-try pass rate</span></div>
+</div>
+<div class="wrap"><table>
+<tr><th>ID</th><th>Challenge</th><th>Variants</th><th class="num">Attempts</th>
+<th class="num">Failures</th><th>First try</th><th>Solved</th></tr>
+{{range .Rows}}<tr>
+<td><code>{{.ID}}</code></td>
+<td>{{.Name}}<br><span class="muted"><code>{{.Slug}}</code> · {{.Kind}}</span></td>
+<td>{{range .Vars}}<span class="pill {{if .Passed}}ok{{else}}dim{{end}}">{{.Label}}</span>{{end}}</td>
+<td class="num">{{.Attempts}}</td>
+<td class="num">{{if .Fails}}<a href="{{$.KeyPath}}/{{.ID}}"><span class="pill bad">{{.Fails}}</span></a>{{else}}0{{end}}</td>
+<td>{{if eq .FirstTry 1}}<span class="pill ok">pass</span>{{else if eq .FirstTry -1}}<span class="pill bad">fail</span>{{else}}<span class="muted">—</span>{{end}}</td>
+<td>{{if .Solved}}{{.Solved}}{{else}}<span class="muted">—</span>{{end}}</td>
+</tr>{{end}}
+</table></div>
+{{template "foot"}}{{end}}
+
+{{define "failures"}}{{template "head" .Slug}}
+<p><a href="../{{.KeyName}}">← <code>{{.Key}}</code></a></p>
+<h1>{{.Name}}</h1>
+<div class="sub"><code>{{.ID}}</code> · <code>{{.Slug}}</code> · {{.Kind}} · {{len .Failures}} failures, newest first</div>
+{{range .Failures}}<div class="fail">
+<div><span class="pill bad">fail</span> <span class="pill dim">{{.Variant}}</span> <span class="muted">{{.Time}}</span></div>
+<div class="diff">{{.Diff}}</div>
+<details><summary>Input</summary><pre>{{.Input}}</pre></details>
+<details><summary>Expected</summary><pre>{{.Expected}}</pre></details>
+<details><summary>Submitted</summary><pre>{{.Got}}</pre></details>
+</div>{{end}}
+{{template "foot"}}{{end}}
